@@ -1,3 +1,10 @@
+/********************************************************
+ * function [normalizeVNodes]: transfer none key VNode to keyed VNode .
+ * function [normalizeClass]: transfer Array class style or object style or string style to plain text .
+ *
+ *
+ * ********************************************************/
+
 import {VNodeFlags} from './enum/VNodeFlags'
 import {ChildrenFlags} from './enum/ChildrenFlags'
 import {VNode} from './interface/VNode'
@@ -200,16 +207,51 @@ function mountElement(
 }
 
 function mountStatefulComponent(vnode: VNode, container: HTMLElement, isSVG) {
-  const instance = new vnode.tag()
-  instance.$vnode = instance.render()
-  mount(instance.$vnode, container, isSVG)
-  instance.$el = vnode.el = instance.$vnode.el
+  // const instance = new vnode.tag()
+  // assign instance ref to vnode.children and it would be used in next update runtime
+  const instance = (vnode.children = new vnode.tag())
+  instance.$props = vnode.data
+  instance._update = function () {
+    if (instance._mounted) {
+      const prevVNode = instance.$vnode
+      const nextVNode = (instance.$vnode = instance.render())
+      // parentNode is Node interface 's property ,
+      patch(prevVNode, nextVNode, prevVNode.el.parentNode)
+      instance.$el = vnode.el = instance.$vnode.el
+    } else {
+      instance.$vnode = instance.render()
+      mount(instance.$vnode, container, isSVG)
+      instance._mounted = true
+      instance.$el = vnode.el = instance.$vnode.el
+      instance.mounted && instance.mounted()
+    }
+
+  }
+  instance._update()
 }
 
 function mountFunctionalComponent(vnode: VNode, container: HTMLElement, isSVG) {
-  const $vnode = vnode.tag()
-  mount($vnode, container, isSVG)
-  vnode.el = $vnode.el
+  vnode.handle = {
+    prev: null,
+    next: vnode,
+    container,
+    update: () => {
+      if (vnode.handle.prev) {
+        const prevVNode = vnode.handle.prev
+        const nextVNode = vnode.handle.next
+        const prevTree = prevVNode.children
+        const props = vnode.data
+        const nextTree = (nextVNode.children = nextVNode.tag(props))
+        patch(prevTree, nextTree, vnode.handle.container)
+      } else {
+        const props = vnode.data
+        const $vnode = (vnode.children = vnode.tag(props))
+        mount($vnode, container, isSVG)
+        vnode.el = $vnode.el
+      }
+    }
+  }
+  vnode.handle.update()
 }
 
 /**
@@ -272,22 +314,19 @@ function mountFragment(vnode: VNode, container: HTMLElement, isSVG) {
  */
 function mountPortal(vnode: VNode, container: HTMLElement, isSVG) {
   const {tag, children, childFlags} = vnode
-  const target = typeof tag === 'string' ? document.querySelector(tag) : tag
+  const target = isString(tag) ? document.querySelector(tag) : tag
   if (childFlags & ChildrenFlags.SINGLE_VNODE) {
-    // -----------------------------------------------------------------------------------------------------------------
-    // line:273; description:2021/3/30; single node
-    // -----------------------------------------------------------------------------------------------------------------
-    mount(vnode, target)
+    mount(children, target)
   } else if (childFlags & ChildrenFlags.MULTIPLE_VNODES) {
-    // -----------------------------------------------------------------------------------------------------------------
-    // line:278; description:2021/3/30; multiple nodes
-    // -----------------------------------------------------------------------------------------------------------------
     for (const child of children) {
       mount(child, target)
     }
   }
+  // 占位的空文本节点
   const placeholder = createTextVNode('')
+  // 将该节点挂载到 container 中
   mountText(placeholder, container)
+  // el 属性引用该节点
   vnode.el = placeholder.el
 }
 
@@ -319,28 +358,126 @@ function mount(vnode: VNode, container: HTMLElement, isSVG?) {
 
 function replaceVNode(prevVNode: VNode, nextVNode: VNode, container: HTMLElement) {
   container.removeChild(prevVNode.el)
+  if (prevVNode.flags & VNodeFlags.COMPONENT_STATEFUL_NORMAL) {
+    // VNode.children is the instance of stateful component
+    const instance = prevVNode.children
+    instance.unmounted && instance.unmounted()
+  }
   mount(nextVNode, container)
 }
 
+function patchData(el: HTMLElement, key: string, prevValue: any, nextValue: any) {
+  switch (key) {
+    case 'style':
+      for (const k in nextValue) {
+        el.style[k] = nextValue[k]
+      }
+      for (let k in prevValue) {
+        if (!nextValue.hasOwnProperty(k)) {
+          el.style[k] = ''
+        }
+      }
+      break;
+    case 'class':
+      el.className = nextValue
+      break
+    default:
+      if (key.charAt(0) === 'o' && key.charAt(1) === 'n') {
+        // event
+        // if it has old value
+        if (prevValue) {
+          el.removeEventListener(key.slice(2), prevValue)
+        }
+        // if it has new value
+        if (nextValue) {
+          el.addEventListener(key.slice(2), nextValue);
+        }
+      } else if (domPropsRE.test(key)) {
+        // treat it as DOM props
+        el[key] = nextValue
+      } else {
+        // treat it as attributes
+        el.setAttribute(key, nextValue)
+      }
+      break
+  }
+}
+
+function patchChildren(prevChildFlags: number, nextChildFlags: number, prevChildren: any, nextChildren: any, container: HTMLElement) {
+  switch (prevChildFlags) {
+    case ChildrenFlags.SINGLE_VNODE:
+      switch (nextChildFlags) {
+        case ChildrenFlags.SINGLE_VNODE:
+          patch(prevChildren, nextChildren, container)
+          break
+        case ChildrenFlags.NO_CHILDREN:
+          container.removeChild(prevChildren.el)
+          break
+        default:
+          container.removeChild(prevChildren.el)
+          for (const node of nextChildren) {
+            mount(node, container)
+          }
+          break
+      }
+      break
+    case ChildrenFlags.NO_CHILDREN:
+      switch (nextChildFlags) {
+        case ChildrenFlags.SINGLE_VNODE:
+          mount(nextChildren, container)
+          break
+        case ChildrenFlags.NO_CHILDREN:
+          break;
+        default:
+          for (const nextChild of nextChildren) {
+            mount(nextChild, container)
+          }
+          break
+      }
+      break;
+    default:
+      // multiple nodes
+      switch (nextChildFlags) {
+        case ChildrenFlags.SINGLE_VNODE:
+          for (const prevChild of prevChildren) {
+            container.removeChild(prevChild.el)
+          }
+          mount(nextChildren, container)
+          break
+        case ChildrenFlags.NO_CHILDREN:
+          for (const prevChild of prevChildren) {
+            container.removeChild(prevChild.el)
+          }
+          break
+        default:
+          // simple version
+          for (const prevChild of prevChildren) {
+            container.removeChild(prevChild.el)
+          }
+          for (const nextChild of nextChildren) {
+            mount(nextChild, container)
+          }
+          break
+      }
+      break;
+  }
+}
+
 function patchElement(prevVNode: VNode, nextVNode: VNode, container: HTMLElement) {
-  function doPatch() {
+  function doPatchNext() {
 
     for (let nextDataKey in nextData) {
       const prevVal = prevData[nextDataKey]
       const nextVal = nextData[nextDataKey]
-      switch (nextDataKey) {
-        case 'style':
-          for (const k in nextVal) {
-            el.style[k] = nextVal[k]
-          }
-          for (let k in prevVal) {
-            if (!nextVal.hasOwnProperty(k)) {
-              el.style[k] = ''
-            }
-          }
-          break;
-        default:
-          break;
+      patchData(el, nextDataKey, prevVal, nextVal)
+    }
+  }
+
+  function doPathPrev() {
+    for (const prevDataKey in prevData) {
+      const prevValue = prevData[prevDataKey]
+      if (prevValue && !nextData.hasOwnProperty(prevDataKey)) {
+        patchData(el, prevDataKey, prevValue, null)
       }
     }
   }
@@ -355,23 +492,85 @@ function patchElement(prevVNode: VNode, nextVNode: VNode, container: HTMLElement
   const el = (nextVNode.el = prevVNode.el)
   const prevData = prevVNode.data
   const nextData = nextVNode.data
-  nextData && doPatch()
+  nextData && doPatchNext()
+  prevData && doPathPrev()
+
+  patchChildren(
+    prevVNode.childFlags,
+    nextVNode.childFlags,
+    prevVNode.children,
+    nextVNode.children,
+    el
+  )
 }
 
 function patchComponent(prevVNode: VNode, nextVNode: VNode, container: HTMLElement) {
-
+  if (nextVNode.tag !== prevVNode.tag) {
+    replaceVNode(prevVNode, nextVNode, container)
+  } else if (nextVNode.flags & VNodeFlags.COMPONENT_STATEFUL_NORMAL) {
+    const instance = (nextVNode.children = prevVNode.children);
+    instance.$props = nextVNode.data;
+    instance._update();
+  } else {
+    // functional component  update coding
+    const handle = (nextVNode.handle = prevVNode.handle)
+    handle.prev = prevVNode
+    handle.next = nextVNode
+    handle.container = container
+    handle.update()
+  }
 }
 
 function patchText(prevVNode: VNode, nextVNode: VNode) {
-
+  const el = (nextVNode.el = prevVNode.el)
+  if (nextVNode.children !== prevVNode.children) {
+    el.nodeValue = nextVNode.children
+  }
 }
 
 function patchFragment(prevVNode: VNode, nextVNode: VNode, container: HTMLElement) {
-
+  patchChildren(prevVNode.childFlags, nextVNode.childFlags, prevVNode.children, nextVNode.children, container)
+  switch (nextVNode.childFlags) {
+    case ChildrenFlags.NO_CHILDREN:
+      nextVNode.el = prevVNode.el
+      break
+    case ChildrenFlags.SINGLE_VNODE:
+      nextVNode.el = prevVNode.children.el
+      break;
+    default:
+      nextVNode.el = prevVNode.children[0].el
+      break
+  }
 }
 
 function patchPortal(prevVNode: VNode, nextVNode: VNode) {
-
+  patchChildren(
+    prevVNode.childFlags,
+    nextVNode.childFlags,
+    prevVNode.children,
+    nextVNode.children,
+    prevVNode.tag
+  )
+  nextVNode.el = prevVNode.el
+  // compare prev tag and next tag
+  if (nextVNode.tag !== prevVNode.tag) {
+    const newContainer = typeof nextVNode.tag === 'string'
+      ? document.querySelector(nextVNode.tag)
+      : nextVNode.tag
+    switch (nextVNode.childFlags) {
+      case ChildrenFlags.SINGLE_VNODE:
+        newContainer.appendChild(nextVNode.children.el)
+        break;
+      case ChildrenFlags.NO_CHILDREN:
+        // nothing to do
+        break
+      default:
+        for (let i = 0; i < nextVNode.children.length; i++) {
+          newContainer.appendChild(nextVNode.children[i].el)
+        }
+        break;
+    }
+  }
 }
 
 /**

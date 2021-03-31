@@ -1,22 +1,13 @@
-import {Component1} from './component1'
-import {h, render} from "@/core";
+import {Component1} from './components/component1'
+import {Fragment, h, Portal, render} from "@/core";
+import {MyComponent} from "./components/MyComponent";
+import {ParentComponent} from "./components/ParentComponent";
+// const statefulComponent = h(MyComponent, null,null)
+// render(statefulComponent,document.getElementById('app'))
 
-// 旧的 VNode
-const prevVNode = h('div', {
-  style: {
-    width: '100px',
-    height: '100px',
-    backgroundColor: 'red'
-  }
-})
+// 有状态组件 VNode
+// const compVNode = h(ParentComponent)
+// render(compVNode, document.getElementById('app'))
 
-// 新的 VNode
-const nextVNode = h('div', {
-  style: {
-    width: '100px',
-    height: '100px',
-    border: '1px solid #dedede'
-  }
-})
-render(prevVNode, document.getElementById('app'))
-render(nextVNode, document.getElementById('app'))
+const compVNode = h(ParentComponent)
+render(compVNode, document.getElementById('app'))

@@ -1,5 +1,5 @@
-import Component from "../../src/components/Component";
-import {h} from "../../src/core";
+import Component from "@/components/Component";
+import {h} from "@/core";
 
 export class Component1 extends Component {
   render() {
