@@ -1,8 +1,8 @@
-import { VNodeFlags } from './enum/VNodeFlags'
-import { ChildrenFlags } from './enum/ChildrenFlags'
-import { VNode } from './interface/VNode'
-import { isObject, isArray, isString } from './util'
-import { domPropsRE } from './rule'
+import {VNodeFlags} from './enum/VNodeFlags'
+import {ChildrenFlags} from './enum/ChildrenFlags'
+import {VNode} from './interface/VNode'
+import {isObject, isArray, isString} from './util'
+import {domPropsRE} from './rule'
 
 export const Fragment = Symbol.for('Fragment')
 export const Portal = Symbol.for('Portal')
@@ -88,7 +88,7 @@ export function h(tag, data = null, children = null) {
       children = createTextVNode(children + '')
     }
   } else {
-    const { length } = children
+    const {length} = children
     switch (length) {
       case 0:
         childFlags = ChildrenFlags.NO_CHILDREN
@@ -219,7 +219,7 @@ function mountFunctionalComponent(vnode: VNode, container: HTMLElement, isSVG) {
  * @param isSVG
  */
 function mountComponent(vnode: VNode, container: HTMLElement, isSVG) {
-  const { flags } = vnode
+  const {flags} = vnode
   if (flags & VNodeFlags.COMPONENT_STATEFUL) {
     mountStatefulComponent(vnode, container, isSVG)
   } else {
@@ -245,7 +245,7 @@ function mountText(vnode: VNode, container: HTMLElement) {
  * @param isSVG
  */
 function mountFragment(vnode: VNode, container: HTMLElement, isSVG) {
-  const { children, childFlags } = vnode
+  const {children, childFlags} = vnode
   switch (childFlags) {
     case ChildrenFlags.NO_CHILDREN:
       const placeholder = createTextVNode('')
@@ -271,7 +271,7 @@ function mountFragment(vnode: VNode, container: HTMLElement, isSVG) {
  * @param isSVG
  */
 function mountPortal(vnode: VNode, container: HTMLElement, isSVG) {
-  const { tag, children, childFlags } = vnode
+  const {tag, children, childFlags} = vnode
   const target = typeof tag === 'string' ? document.querySelector(tag) : tag
   if (childFlags & ChildrenFlags.SINGLE_VNODE) {
     // -----------------------------------------------------------------------------------------------------------------
@@ -298,7 +298,7 @@ function mountPortal(vnode: VNode, container: HTMLElement, isSVG) {
  * @param isSVG {boolean}
  */
 function mount(vnode: VNode, container: HTMLElement, isSVG?) {
-  const { flags } = vnode
+  const {flags} = vnode
   if (flags & VNodeFlags.ELEMENT) {
     // mount normal label
     mountElement(vnode, container, isSVG)
@@ -317,12 +317,86 @@ function mount(vnode: VNode, container: HTMLElement, isSVG?) {
   }
 }
 
+function replaceVNode(prevVNode: VNode, nextVNode: VNode, container: HTMLElement) {
+  container.removeChild(prevVNode.el)
+  mount(nextVNode, container)
+}
+
+function patchElement(prevVNode: VNode, nextVNode: VNode, container: HTMLElement) {
+  function doPatch() {
+
+    for (let nextDataKey in nextData) {
+      const prevVal = prevData[nextDataKey]
+      const nextVal = nextData[nextDataKey]
+      switch (nextDataKey) {
+        case 'style':
+          for (const k in nextVal) {
+            el.style[k] = nextVal[k]
+          }
+          for (let k in prevVal) {
+            if (!nextVal.hasOwnProperty(k)) {
+              el.style[k] = ''
+            }
+          }
+          break;
+        default:
+          break;
+      }
+    }
+  }
+
+  // -----------------------------------------------------------------------------------------------------------------
+  // line:327; description:2021/3/31; We think different labels render different content
+  // -----------------------------------------------------------------------------------------------------------------
+  if (prevVNode.tag !== nextVNode.tag) {
+    replaceVNode(prevVNode, nextVNode, container)
+    return
+  }
+  const el = (nextVNode.el = prevVNode.el)
+  const prevData = prevVNode.data
+  const nextData = nextVNode.data
+  nextData && doPatch()
+}
+
+function patchComponent(prevVNode: VNode, nextVNode: VNode, container: HTMLElement) {
+
+}
+
+function patchText(prevVNode: VNode, nextVNode: VNode) {
+
+}
+
+function patchFragment(prevVNode: VNode, nextVNode: VNode, container: HTMLElement) {
+
+}
+
+function patchPortal(prevVNode: VNode, nextVNode: VNode) {
+
+}
+
 /**
  * patch
- * @param vnode {VNode}
+ * @param prevVNode {VNode}
+ * @param nextVNode {VNode}
  * @param container {HTMLElement}-
  */
-function patch(prevVNode: any, vnode, container) {}
+function patch(prevVNode: VNode, nextVNode: VNode, container: HTMLElement) {
+  const nextFlags = nextVNode.flags
+  const prevFlags = prevVNode.flags
+  if (prevFlags !== nextFlags) {
+    replaceVNode(prevVNode, nextVNode, container)
+  } else if (nextFlags & VNodeFlags.ELEMENT) {
+    patchElement(prevVNode, nextVNode, container)
+  } else if (nextFlags & VNodeFlags.COMPONENT) {
+    patchComponent(prevVNode, nextVNode, container)
+  } else if (nextFlags & VNodeFlags.TEXT) {
+    patchText(prevVNode, nextVNode)
+  } else if (nextFlags & VNodeFlags.FRAGMENT) {
+    patchFragment(prevVNode, nextVNode, container)
+  } else if (nextFlags & VNodeFlags.PORTAL) {
+    patchPortal(prevVNode, nextVNode)
+  }
+}
 
 /**
  * render function

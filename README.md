@@ -10,6 +10,10 @@
 
 ### todo:
 
+ - [ ] Patch function
+ - [ ] Diff algorithm
+ - [ ] User defined render
+
 ### how
 
 Inspired by this project:
