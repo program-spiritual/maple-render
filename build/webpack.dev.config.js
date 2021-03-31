@@ -19,7 +19,7 @@ module.exports = smart(baseConfig, {
     contentBase: './',
     host: '127.0.0.1',
     disableHostCheck: true,
-    useLocalIp: true,
+    useLocalIp: false,
     port: 9001,
     historyApiFallback: true,
     inline: true,

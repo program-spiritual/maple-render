@@ -10,6 +10,7 @@ export interface VNode {
   data: any;
   _isVNode: boolean;
   tag: any;
+  key?: string;
   children: any;
   flags: number;
   childFlags: number;
