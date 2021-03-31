@@ -1,0 +1,43 @@
+{
+  "name": "maplerender",
+  "version": "1.0.0",
+  "description": "",
+  "main": "build/core.js",
+  "scripts": {
+    "test": "",
+    "serve": "tsc  --watch",
+    "dev": "cross-env NODE_ENV='development' webpack-dev-server  --config build/webpack.dev.config.js   --colors  ",
+    "build": "webpack"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "fork-ts-checker-webpack-plugin": "^6.2.0",
+    "reflect-metadata": "^0.1.13",
+    "tslib": "^2.1.0"
+  },
+  "devDependencies": {
+    "ts-loader": "^8.1.0",
+    "typescript": "^4.2.3",
+    "webpack": "^4.40.2",
+    "webpack-cli": "^3.3.8",
+    "@babel/core": "^7.6.0",
+    "@babel/plugin-proposal-class-properties": "^7.8.3",
+    "@babel/plugin-proposal-object-rest-spread": "^7.8.3",
+    "@babel/preset-env": "^7.6.0",
+    "@babel/preset-typescript": "^7.6.0",
+    "@types/webpack-env": "^1.14.0",
+    "babel-loader": "^8.0.6",
+    "cache-loader": "^4.1.0",
+    "clean-webpack-plugin": "^3.0.0",
+    "cross-env": "^5.2.1",
+    "fork-ts-checker-webpack-plugin": "^1.6.0",
+    "friendly-errors-webpack-plugin": "^1.7.0",
+    "happypack": "^5.0.1",
+    "html-webpack-plugin": "^3.2.0",
+    "speed-measure-webpack-plugin": "^1.3.1",
+    "thread-loader": "^2.1.3",
+    "webpack-dev-server": "^3.8.0",
+    "webpack-merge": "^4.2.2"
+  }
+}
