@@ -1,16 +1,19 @@
 {
   "compilerOptions": {
-    "target": "ES5",
+    "target": "ES2015",
     "module": "CommonJS",
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "jsx": "preserve",
+    "declaration": true,
+    "declarationDir": "dist",
+    "sourceMap": true,
     "noImplicitAny": false,
     "importHelpers": true,
     "moduleResolution": "node",
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
-    "sourceMap": true,
+    "removeComments": true,
     "outDir": "compile",
     "rootDir": ".",
     "baseUrl": ".",
@@ -21,7 +24,7 @@
       ]
     },
     "lib": [
-      "es5",
+      "es2015",
       "dom",
       "dom.iterable",
       "scripthost"

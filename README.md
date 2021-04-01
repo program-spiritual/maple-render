@@ -13,7 +13,7 @@
  - [x] Patch function
  - [x] Diff algorithm
  - [x] User defined render
- - [ ] Build Version
+ - [x] Build Version
 ### how
 
 Inspired by this project:
@@ -21,5 +21,9 @@ Inspired by this project:
 
 > http://hcysun.me/vue-design/zh
 
+
+### tutorial 
+
+using in vue or any popular framework:
 
 
