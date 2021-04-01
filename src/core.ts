@@ -5,29 +5,63 @@
  *
  * ********************************************************/
 
-import {VNodeFlags} from './enum/VNodeFlags'
-import {ChildrenFlags} from './enum/ChildrenFlags'
-import {VNode} from './interface/VNode'
-import {isObject, isArray, isString, lis} from './util'
-import {domPropsRE} from './rule'
+import {VNodeFlags} from '@/enum/VNodeFlags'
+import {ChildrenFlags} from '@/enum/ChildrenFlags'
+import {VNode} from '@/interface/VNode'
+import {isObject, isArray, isString, lis} from '@/util'
+import {domPropsRE} from '@/rule'
+import {createTextVNode} from "@/h";
 
-export const Fragment = Symbol.for('Fragment')
-export const Portal = Symbol.for('Portal')
 
-function normalizeVNodes(children: any) {
-  const newChildren = []
-  // 遍历 children
-  for (let i = 0; i < children.length; i++) {
-    const child = children[i]
-    if (child.key == null) {
-      child.key = '|' + i
+/**
+ * render function
+ * @param vnode {VNode}
+ * @param container {HTMLElement}
+ */
+export function render(
+  vnode: VNode,
+  container: HTMLElement & { vnode?: VNode },
+) {
+  const prevVNode = container.vnode
+  if (prevVNode == null) {
+    if (vnode) {
+      // -----------------------------------------------------------------------------------------------------------------
+      // line:324; description:2021/3/30;
+      // There is no old VNode, only a new VNode.
+      // Use the `mount` function to mount a brand new VNode
+      // -----------------------------------------------------------------------------------------------------------------
+      mount(vnode, container)
+      // -----------------------------------------------------------------------------------------------------------------
+      // line:330; description:2021/3/30;
+      // Add the new VNode to the container.vnode property, so that the old VNode will exist in the next rendering
+      // -----------------------------------------------------------------------------------------------------------------
+      container.vnode = vnode
     }
-    newChildren.push(child)
+  } else {
+    if (vnode) {
+      // -----------------------------------------------------------------------------------------------------------------
+      // line:332; description:2021/3/30;
+      // There are old VNodes, and there are new VNodes.
+      // Then call the `patch` function to patch
+      // -----------------------------------------------------------------------------------------------------------------
+      patch(prevVNode, vnode, container)
+      // update container.vnode
+      container.vnode = vnode
+    } else {
+      // -----------------------------------------------------------------------------------------------------------------
+      // line:338; description:2021/3/30;       // There is an old VNode but no new VNode,\
+      // which means that the DOM should be removed. You can use the removeChild function in the browser.
+      // -----------------------------------------------------------------------------------------------------------------
+      container.removeChild(prevVNode.el)
+      container.vnode = null
+    }
   }
-  return newChildren
 }
 
-function normalizeClass(classValue: any) {
+// -----------------------------------------------------------------------------------------------------------------
+// line:16; description:2021/4/1; helper function
+// -----------------------------------------------------------------------------------------------------------------
+export function normalizeClass(classValue: any) {
   function concatString() {
     for (let i = 0; i < classValue.length; i++) {
       res += normalizeClass(classValue[i]) + ' '
@@ -49,80 +83,20 @@ function normalizeClass(classValue: any) {
 
   return res.trim()
 }
-
-function createTextVNode(text: string) {
-  return {
-    _isVNode: true,
-    flags: VNodeFlags.TEXT,
-    tag: null,
-    data: null,
-    children: text,
-    childFlags: ChildrenFlags.NO_CHILDREN,
-    el: null,
+export function replaceVNode(prevVNode: VNode, nextVNode: VNode, container: HTMLElement) {
+  container.removeChild(prevVNode.el)
+  if (prevVNode.flags & VNodeFlags.COMPONENT_STATEFUL_NORMAL) {
+    // VNode.children is the instance of stateful component
+    const instance = prevVNode.children
+    instance.unmounted && instance.unmounted()
   }
+  mount(nextVNode, container)
 }
 
-export function h(tag, data = null, children = null) {
-  let flags = null
-  if (typeof tag === 'string') {
-    flags = tag === 'svg' ? VNodeFlags.ELEMENT_SVG : VNodeFlags.ELEMENT_HTML
-  } else if (tag === Fragment) {
-    flags = VNodeFlags.FRAGMENT
-  } else if (tag === Portal) {
-    flags = VNodeFlags.PORTAL
-    tag = data && data.target
-  } else {
-    if (tag !== null && typeof tag === 'object') {
-      flags = tag.functional
-        ? VNodeFlags.COMPONENT_FUNCTIONAL // functional
-        : VNodeFlags.COMPONENT_STATEFUL_NORMAL // stateful
-    } else if (typeof tag === 'function') {
-      flags =
-        tag.prototype && tag.prototype.render
-          ? VNodeFlags.COMPONENT_STATEFUL_NORMAL
-          : VNodeFlags.COMPONENT_FUNCTIONAL
-    }
-  }
 
-  let childFlags = null
-  if (!Array.isArray(children)) {
-    if (children == null) {
-      childFlags = ChildrenFlags.NO_CHILDREN
-    } else if (children._isVNode) {
-      childFlags = ChildrenFlags.SINGLE_VNODE
-    } else {
-      childFlags = ChildrenFlags.SINGLE_VNODE
-      children = createTextVNode(children + '')
-    }
-  } else {
-    const {length} = children
-    switch (length) {
-      case 0:
-        childFlags = ChildrenFlags.NO_CHILDREN
-        break
-      case 1:
-        childFlags = ChildrenFlags.SINGLE_VNODE
-        children = children[0]
-        break
-      default:
-        childFlags = ChildrenFlags.KEYED_VNODES
-        children = normalizeVNodes(children)
-        break
-    }
-  }
-
-  return {
-    _isVNode: true,
-    tag,
-    data,
-    key: data && data.key ? data.key : null,
-    children,
-    flags,
-    childFlags,
-    el: null,
-  }
-}
-
+// -----------------------------------------------------------------------------------------------------------------
+// line:52; description:2021/4/1; mount function
+// -----------------------------------------------------------------------------------------------------------------
 /**
  * mount normal elements
  * @param vnode {VNode}
@@ -130,7 +104,7 @@ export function h(tag, data = null, children = null) {
  * @param isSVG {boolean}
  * @param refNode
  */
-function mountElement(
+export function mountElement(
   vnode: VNode,
   container: HTMLElement,
   isSVG: boolean | number,
@@ -209,7 +183,7 @@ function mountElement(
   refNode ? container.insertBefore(el, refNode) : container.appendChild(el)
 }
 
-function mountStatefulComponent(vnode: VNode, container: HTMLElement, isSVG) {
+export function mountStatefulComponent(vnode: VNode, container: HTMLElement, isSVG) {
   // const instance = new vnode.tag()
   // assign instance ref to vnode.children and it would be used in next update runtime
   const instance = (vnode.children = new vnode.tag())
@@ -233,7 +207,7 @@ function mountStatefulComponent(vnode: VNode, container: HTMLElement, isSVG) {
   instance._update()
 }
 
-function mountFunctionalComponent(vnode: VNode, container: HTMLElement, isSVG) {
+export function mountFunctionalComponent(vnode: VNode, container: HTMLElement, isSVG) {
   vnode.handle = {
     prev: null,
     next: vnode,
@@ -263,7 +237,7 @@ function mountFunctionalComponent(vnode: VNode, container: HTMLElement, isSVG) {
  * @param container {HTMLElement}
  * @param isSVG
  */
-function mountComponent(vnode: VNode, container: HTMLElement, isSVG) {
+export function mountComponent(vnode: VNode, container: HTMLElement, isSVG) {
   const {flags} = vnode
   if (flags & VNodeFlags.COMPONENT_STATEFUL) {
     mountStatefulComponent(vnode, container, isSVG)
@@ -277,7 +251,7 @@ function mountComponent(vnode: VNode, container: HTMLElement, isSVG) {
  * @param vnode {VNode}
  * @param container {HTMLElement}
  */
-function mountText(vnode: VNode, container: HTMLElement) {
+export function mountText(vnode: VNode, container: HTMLElement) {
   const el = document.createTextNode(vnode.children)
   vnode.el = el
   container.appendChild(el)
@@ -289,7 +263,7 @@ function mountText(vnode: VNode, container: HTMLElement) {
  * @param container {HTMLElement}
  * @param isSVG
  */
-function mountFragment(vnode: VNode, container: HTMLElement, isSVG) {
+export function mountFragment(vnode: VNode, container: HTMLElement, isSVG) {
   const {children, childFlags} = vnode
   switch (childFlags) {
     case ChildrenFlags.NO_CHILDREN:
@@ -315,7 +289,7 @@ function mountFragment(vnode: VNode, container: HTMLElement, isSVG) {
  * @param container {HTMLElement}
  * @param isSVG
  */
-function mountPortal(vnode: VNode, container: HTMLElement, isSVG) {
+export function mountPortal(vnode: VNode, container: HTMLElement, isSVG) {
   const {tag, children, childFlags} = vnode
   const target = isString(tag) ? document.querySelector(tag) : tag
   if (childFlags & ChildrenFlags.SINGLE_VNODE) {
@@ -334,13 +308,13 @@ function mountPortal(vnode: VNode, container: HTMLElement, isSVG) {
 }
 
 /**
- * render function
+ *
  * @param vnode {VNode}
  * @param container {HTMLElement}
  * @param isSVG {boolean}
  * @param refNode
  */
-function mount(vnode: VNode, container: HTMLElement, isSVG?, refNode?) {
+export function mount(vnode: VNode, container: HTMLElement, isSVG?, refNode?) {
   const {flags} = vnode
   if (flags & VNodeFlags.ELEMENT) {
     // mount normal label
@@ -360,17 +334,10 @@ function mount(vnode: VNode, container: HTMLElement, isSVG?, refNode?) {
   }
 }
 
-function replaceVNode(prevVNode: VNode, nextVNode: VNode, container: HTMLElement) {
-  container.removeChild(prevVNode.el)
-  if (prevVNode.flags & VNodeFlags.COMPONENT_STATEFUL_NORMAL) {
-    // VNode.children is the instance of stateful component
-    const instance = prevVNode.children
-    instance.unmounted && instance.unmounted()
-  }
-  mount(nextVNode, container)
-}
-
-function patchData(el: HTMLElement, key: string, prevValue: any, nextValue: any) {
+// -----------------------------------------------------------------------------------------------------------------
+// line:292; description:2021/4/1; patch function
+// -----------------------------------------------------------------------------------------------------------------
+export function patchData(el: HTMLElement, key: string, prevValue: any, nextValue: any) {
   switch (key) {
     case 'style':
       for (const k in nextValue) {
@@ -407,7 +374,7 @@ function patchData(el: HTMLElement, key: string, prevValue: any, nextValue: any)
   }
 }
 
-function patchChildren(prevChildFlags: number, nextChildFlags: number, prevChildren: any, nextChildren: any, container: HTMLElement) {
+export function patchChildren(prevChildFlags: number, nextChildFlags: number, prevChildren: any, nextChildren: any, container: HTMLElement) {
   switch (prevChildFlags) {
     case ChildrenFlags.SINGLE_VNODE:
       switch (nextChildFlags) {
@@ -742,7 +709,7 @@ function patchChildren(prevChildFlags: number, nextChildFlags: number, prevChild
   }
 }
 
-function patchElement(prevVNode: VNode, nextVNode: VNode, container: HTMLElement) {
+export function patchElement(prevVNode: VNode, nextVNode: VNode, container: HTMLElement) {
   function doPatchNext() {
 
     for (let nextDataKey in nextData) {
@@ -783,7 +750,7 @@ function patchElement(prevVNode: VNode, nextVNode: VNode, container: HTMLElement
   )
 }
 
-function patchComponent(prevVNode: VNode, nextVNode: VNode, container: HTMLElement) {
+export function patchComponent(prevVNode: VNode, nextVNode: VNode, container: HTMLElement) {
   if (nextVNode.tag !== prevVNode.tag) {
     replaceVNode(prevVNode, nextVNode, container)
   } else if (nextVNode.flags & VNodeFlags.COMPONENT_STATEFUL_NORMAL) {
@@ -800,14 +767,14 @@ function patchComponent(prevVNode: VNode, nextVNode: VNode, container: HTMLEleme
   }
 }
 
-function patchText(prevVNode: VNode, nextVNode: VNode) {
+export function patchText(prevVNode: VNode, nextVNode: VNode) {
   const el = (nextVNode.el = prevVNode.el)
   if (nextVNode.children !== prevVNode.children) {
     el.nodeValue = nextVNode.children
   }
 }
 
-function patchFragment(prevVNode: VNode, nextVNode: VNode, container: HTMLElement) {
+export function patchFragment(prevVNode: VNode, nextVNode: VNode, container: HTMLElement) {
   patchChildren(prevVNode.childFlags, nextVNode.childFlags, prevVNode.children, nextVNode.children, container)
   switch (nextVNode.childFlags) {
     case ChildrenFlags.NO_CHILDREN:
@@ -822,7 +789,7 @@ function patchFragment(prevVNode: VNode, nextVNode: VNode, container: HTMLElemen
   }
 }
 
-function patchPortal(prevVNode: VNode, nextVNode: VNode) {
+export function patchPortal(prevVNode: VNode, nextVNode: VNode) {
   patchChildren(
     prevVNode.childFlags,
     nextVNode.childFlags,
@@ -858,7 +825,7 @@ function patchPortal(prevVNode: VNode, nextVNode: VNode) {
  * @param nextVNode {VNode}
  * @param container {HTMLElement}-
  */
-function patch(prevVNode: VNode, nextVNode: VNode, container: HTMLElement) {
+export function patch(prevVNode: VNode, nextVNode: VNode, container: HTMLElement) {
   const nextFlags = nextVNode.flags
   const prevFlags = prevVNode.flags
   if (prevFlags !== nextFlags) {
@@ -876,47 +843,4 @@ function patch(prevVNode: VNode, nextVNode: VNode, container: HTMLElement) {
   }
 }
 
-/**
- * render function
- * @param vnode {VNode}
- * @param container {HTMLElement}
- */
-export function render(
-  vnode: VNode,
-  container: HTMLElement & { vnode?: VNode },
-) {
-  const prevVNode = container.vnode
-  if (prevVNode == null) {
-    if (vnode) {
-      // -----------------------------------------------------------------------------------------------------------------
-      // line:324; description:2021/3/30;
-      // There is no old VNode, only a new VNode.
-      // Use the `mount` function to mount a brand new VNode
-      // -----------------------------------------------------------------------------------------------------------------
-      mount(vnode, container)
-      // -----------------------------------------------------------------------------------------------------------------
-      // line:330; description:2021/3/30;
-      // Add the new VNode to the container.vnode property, so that the old VNode will exist in the next rendering
-      // -----------------------------------------------------------------------------------------------------------------
-      container.vnode = vnode
-    }
-  } else {
-    if (vnode) {
-      // -----------------------------------------------------------------------------------------------------------------
-      // line:332; description:2021/3/30;
-      // There are old VNodes, and there are new VNodes.
-      // Then call the `patch` function to patch
-      // -----------------------------------------------------------------------------------------------------------------
-      patch(prevVNode, vnode, container)
-      // update container.vnode
-      container.vnode = vnode
-    } else {
-      // -----------------------------------------------------------------------------------------------------------------
-      // line:338; description:2021/3/30;       // There is an old VNode but no new VNode,\
-      // which means that the DOM should be removed. You can use the removeChild function in the browser.
-      // -----------------------------------------------------------------------------------------------------------------
-      container.removeChild(prevVNode.el)
-      container.vnode = null
-    }
-  }
-}
+

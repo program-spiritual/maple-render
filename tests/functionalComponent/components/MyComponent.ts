@@ -1,5 +1,5 @@
 import Component from "@/components/Component";
-import {h} from "@/core";
+import {h} from "@/h";
 class MyComponent extends Component{
   // 自身状态 or 本地状态
   localState = 'one'

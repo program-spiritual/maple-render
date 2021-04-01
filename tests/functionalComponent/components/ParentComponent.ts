@@ -1,5 +1,5 @@
 import Component from "@/components/Component";
-import {h} from "@/core";
+import {h} from "@/h";
 import {ChildComponent} from "./ChildComponent";
 import {MyFunctionalComp} from "./MyFunctionalComp";
 

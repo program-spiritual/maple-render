@@ -1,4 +1,4 @@
-import { h } from '../core'
+import { h } from '@/h'
 
 export function MyFunctionalComponent() {
   return h(

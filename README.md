@@ -10,10 +10,10 @@
 
 ### todo:
 
- - [ ] Patch function
- - [ ] Diff algorithm
- - [ ] User defined render
-
+ - [x] Patch function
+ - [x] Diff algorithm
+ - [x] User defined render
+ - [ ] Build Version
 ### how
 
 Inspired by this project:
