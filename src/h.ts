@@ -1,5 +1,5 @@
-import {VNodeFlags} from "@/enum/VNodeFlags";
-import {ChildrenFlags} from "@/enum/ChildrenFlags";
+import {VNodeFlags} from "./enum/VNodeFlags";
+import {ChildrenFlags} from "./enum/ChildrenFlags";
 
 export const Fragment = Symbol.for('Fragment')
 export const Portal = Symbol.for('Portal')

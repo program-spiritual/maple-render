@@ -1,20 +1,20 @@
 // -----------------------------------------------------------------------------------------------------------------
 // line:2; description:2021/4/1; enum
 // -----------------------------------------------------------------------------------------------------------------
-import {VNodeFlags} from '@/enum/VNodeFlags'
-import {ChildrenFlags} from '@/enum/ChildrenFlags'
+import {VNodeFlags} from './enum/VNodeFlags'
+import {ChildrenFlags} from './enum/ChildrenFlags'
 // -----------------------------------------------------------------------------------------------------------------
 // line:5; description:2021/4/1; interface
 // -----------------------------------------------------------------------------------------------------------------
-import {VNode} from '@/interface/VNode'
-import {CustomerRenderOptions} from "@/interface/CustomerRenderOptions";
+import {VNode} from './interface/VNode'
+import {CustomerRenderOptions} from "./interface/CustomerRenderOptions";
 // -----------------------------------------------------------------------------------------------------------------
 // line:10; description:2021/4/1; util function
 // -----------------------------------------------------------------------------------------------------------------
 
-import {isObject, isArray, isString, lis} from '@/util'
-import {domPropsRE} from '@/rule'
-import {createTextVNode} from "@/h";
+import {isObject, isArray, isString, lis} from './util'
+import {domPropsRE} from './rule'
+import {createTextVNode} from "./h";
 
 export default function createRender(options:CustomerRenderOptions) {
   /********************************************************

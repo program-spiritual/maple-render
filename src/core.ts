@@ -5,12 +5,12 @@
  *
  * ********************************************************/
 
-import {VNodeFlags} from '@/enum/VNodeFlags'
-import {ChildrenFlags} from '@/enum/ChildrenFlags'
-import {VNode} from '@/interface/VNode'
-import {isObject, isArray, isString, lis} from '@/util'
-import {domPropsRE} from '@/rule'
-import {createTextVNode} from "@/h";
+import {VNodeFlags} from './enum/VNodeFlags'
+import {ChildrenFlags} from './enum/ChildrenFlags'
+import {VNode} from './interface/VNode'
+import {isObject, isArray, isString, lis} from './util'
+import {domPropsRE} from './rule'
+import {createTextVNode} from "./h";
 
 
 /**
