@@ -1,6 +1,6 @@
 {
   "name": "maplerender",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "",
   "main": "dist/main.js",
   "types": "dist/src/main.d.ts",
