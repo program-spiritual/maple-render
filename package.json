@@ -17,7 +17,8 @@
     "tslib": "^2.1.0"
   },
   "files": [
-    "dist"
+    "dist",
+    "template"
   ],
   "devDependencies": {
     "@babel/core": "^7.6.0",
