@@ -79,8 +79,8 @@ export function MyFunctionalComponent() {
       },
     },
     [
-      h('span', null, '我是组件的标题1......'),
-      h('span', null, '我是组件的标题2......'),
+      h('span', null, 'component title 1...'),
+      h('span', null, 'component title 2...'),
     ],
   )
 }
@@ -107,8 +107,8 @@ export class MyComponent extends MYSuperComponent {
         },
       },
       [
-        h('span', null, '我是组件的标题1......'),
-        h('span', null, '我是组件的标题2......'),
+        h('span', null, 'component title 1...'),
+        h('span', null, 'component title 2...'),
       ],
     )
   }
@@ -208,7 +208,7 @@ export {};
 
 ## customer render
 
-if wwant to define your self render ,please clone the repo on github and change everything .
+if U want to define your self render ,please clone the repo on github and change everything .
 
 ```shell
 https://github.com/xiaomiwujiecao/maple-render
