@@ -1,6 +1,6 @@
 ## Maple Render
 
-[![](template/maplerender.svg)](https://github.com/xiaomiwujiecao/maple-render)
+[![](./template/maplerender.svg)](https://github.com/xiaomiwujiecao/maple-render)
 
 
 ### target:
@@ -209,3 +209,7 @@ export {};
 ## customer render
 
 if wwant to define your self render ,please clone the repo on github and change everything .
+
+```shell
+https://github.com/xiaomiwujiecao/maple-render
+```
