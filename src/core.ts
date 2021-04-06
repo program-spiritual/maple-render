@@ -494,213 +494,62 @@ export function patchChildren(prevChildFlags: number, nextChildFlags: number, pr
           //--------------------------------------------------
           // description:2021/4/1 double-end compare  vue2.0
           //--------------------------------------------------
-          // let oldStartIdx = 0
-          // let oldEndIdx = prevChildren.length - 1
-          // let newStartIdx = 0
-          // let newEndIdx = nextChildren.length - 1
-          // let oldStartVNode = prevChildren[oldStartIdx]
-          // let oldEndVNode = prevChildren[oldEndIdx]
-          // let newStartVNode = nextChildren[newStartIdx]
-          // let newEndVNode = nextChildren[newEndIdx]
-          // while (oldStartIdx <= oldEndIdx && newStartIdx <= newEndIdx) {
-          //   if (!oldStartVNode) {
-          //     oldStartVNode = prevChildren[++oldStartIdx]
-          //   } else if (!oldEndVNode) {
-          //     oldEndVNode = prevChildren[--oldEndIdx]
-          //   } else if (oldStartVNode.key === newStartVNode.key) {
-          //     patch(oldStartVNode, newStartVNode, container)
-          //     oldStartVNode = prevChildren[++oldStartIdx]
-          //     newStartVNode = nextChildren[++newStartIdx]
-          //   } else if (oldEndVNode.key === newEndVNode.key) {
-          //     patch(oldEndVNode, newEndVNode, container)
-          //     oldEndVNode = prevChildren[--oldEndIdx]
-          //     newEndVNode = nextChildren[--newEndIdx]
-          //   } else if (oldStartVNode.key === newEndVNode.key) {
-          //     patch(oldStartVNode, newEndVNode, container)
-          //     container.insertBefore(oldStartVNode.el, oldEndVNode.el.nextSibling)
-          //     oldStartVNode = prevChildren[++oldStartIdx]
-          //     newEndVNode = nextChildren[--newEndIdx]
-          //   } else if (oldEndVNode.key === newStartVNode.key) {
-          //     patch(oldEndVNode, newStartVNode, container)
-          //     container.insertBefore(oldEndVNode.el, oldStartVNode.el)
-          //     oldEndVNode = prevChildren[--oldEndIdx]
-          //     newStartVNode = nextChildren[++newStartIdx]
-          //   } else {
-          //     const idxInOld = prevChildren.findIndex(
-          //       node => node.key === newStartVNode.key
-          //     )
-          //     if (idxInOld >= 0) {
-          //       const vnodeToMove = prevChildren[idxInOld]
-          //       patch(vnodeToMove, newStartVNode, container)
-          //       container.insertBefore(vnodeToMove.el, oldStartVNode.el)
-          //       prevChildren[idxInOld] = undefined
-          //     }else{
-          //       // can not found , it should be one new node
-          //       mount(newStartVNode, container, false, oldStartVNode.el)
-          //     }
-          //   }
-          // }
-          //
-          // if (oldEndIdx < oldStartIdx) {
-          //   // forgot to handle delay node
-          //   for (let i = newStartIdx; i <= newEndIdx; i++) {
-          //     mount(nextChildren[i], container, false, oldStartVNode.el)
-          //   }
-          // }else if (newEndIdx < newStartIdx) {
-          //   for (let i = oldStartIdx; i <= oldEndIdx; i++) {
-          //     container.removeChild(prevChildren[i].el)
-          //   }
-          // }
-          //--------------------------------------------------
-          // description:2021/4/1 vu3 3.0
-          //--------------------------------------------------
-          // 更新相同的前缀节点
-          // j 为指向新旧 children 中第一个节点的索引
-          let j = 0
-          let prevVNode = prevChildren[j]
-          let nextVNode = nextChildren[j]
-          // while 循环向后遍历，直到遇到拥有不同 key 值的节点为止
-
-          // 指向旧 children 最后一个节点的索引
-          let prevEnd = prevChildren.length - 1
-          // 指向新 children 最后一个节点的索引
-          let nextEnd = nextChildren.length - 1
-
-          prevVNode = prevChildren[prevEnd]
-          nextVNode = nextChildren[nextEnd]
-          outer: {
-          while (prevVNode.key === nextVNode.key) {
-            // 调用 patch 函数更新
-            patch(prevVNode, nextVNode, container)
-            j++
-            if (j > prevEnd || j > nextEnd) {
-              break outer
-            }
-            prevVNode = prevChildren[j]
-            nextVNode = nextChildren[j]
-          }
-
-
-          // while 循环向前遍历，直到遇到拥有不同 key 值的节点为止
-          while (prevVNode.key === nextVNode.key) {
-            // 调用 patch 函数更新
-            patch(prevVNode, nextVNode, container)
-            prevEnd--
-            nextEnd--
-            if (j > prevEnd || j > nextEnd) {
-              break outer
-            }
-            prevVNode = prevChildren[prevEnd]
-            nextVNode = nextChildren[nextEnd]
-          }
-        }
-          // 满足条件，则说明从 j -> nextEnd 之间的节点应作为新节点插入
-          if (j > prevEnd && j <= nextEnd) {
-            // 所有新节点应该插入到位于 nextPos 位置的节点的前面
-            const nextPos = nextEnd + 1
-            const refNode =
-              nextPos < nextChildren.length ? nextChildren[nextPos].el : null
-            // 采用 while 循环，调用 mount 函数挂载节点
-            while (j <= nextEnd) {
-              mount(nextChildren[j++], container, false, refNode)
-            }
-          }else if (j > nextEnd) {
-            // j -> prevEnd 之间的节点应该被移除
-            while (j <= prevEnd) {
-              container.removeChild(prevChildren[j++].el)
-            }
-          }else{
-            const nextLeft = nextEnd - j + 1  // 新 children 中剩余未处理节点的数量
-            const source = []
-            for (let i = 0; i < nextLeft; i++) {
-              source.push(-1)
-            }
-            const prevStart = j
-            const nextStart = j
-            let moved = false
-            let pos = 0
-            // 构建索引表
-            const keyIndex = {}
-            for(let i = nextStart; i <= nextEnd; i++) {
-              keyIndex[nextChildren[i].key] = i
-            }
-            let patched = 0
-            // 遍历旧 children 的剩余未处理节点
-            for(let i = prevStart; i <= prevEnd; i++) {
-              prevVNode = prevChildren[i]
-
-              if (patched < nextLeft) {
-                // 通过索引表快速找到新 children 中具有相同 key 的节点的位置
-                const k = keyIndex[prevVNode.key]
-                if (typeof k !== 'undefined') {
-                  nextVNode = nextChildren[k]
-                  // patch 更新
-                  patch(prevVNode, nextVNode, container)
-                  patched++
-                  // 更新 source 数组
-                  source[k - nextStart] = i
-                  // 判断是否需要移动
-                  if (k < pos) {
-                    moved = true
-                  } else {
-                    pos = k
-                  }
-                } else {
-                  // 没找到，说明旧节点在新 children 中已经不存在了，应该移除
-                  container.removeChild(prevVNode.el)
-                }
-              } else {
-                // 多余的节点，应该移除
-                container.removeChild(prevVNode.el)
-              }
-
-            }
-            if (moved) {
-              const seq = lis(source)
-              // j 指向最长递增子序列的最后一个值
-              let j = seq.length - 1
-              // 从后向前遍历新 children 中的剩余未处理节点
-              for (let i = nextLeft - 1; i >= 0; i--) {
-                if (source[i] === -1) {
-                  // 作为全新的节点挂载
-
-                  // 该节点在新 children 中的真实位置索引
-                  const pos = i + nextStart
-                  const nextVNode = nextChildren[pos]
-                  // 该节点下一个节点的位置索引
-                  const nextPos = pos + 1
-                  // 挂载
-                  mount(
-                    nextVNode,
-                    container,
-                    false,
-                    nextPos < nextChildren.length
-                      ? nextChildren[nextPos].el
-                      : null
-                  )
-                } else if (i !== seq[j]) {
-                  // 说明该节点需要移动
-
-                  // 该节点在新 children 中的真实位置索引
-                  const pos = i + nextStart
-                  const nextVNode = nextChildren[pos]
-                  // 该节点下一个节点的位置索引
-                  const nextPos = pos + 1
-                  // 移动
-                  container.insertBefore(
-                    nextVNode.el,
-                    nextPos < nextChildren.length
-                      ? nextChildren[nextPos].el
-                      : null
-                  )
-                } else {
-                  // 当 i === seq[j] 时，说明该位置的节点不需要移动
-                  // 并让 j 指向下一个位置
-                  j--
-                }
+          let oldStartIdx = 0
+          let oldEndIdx = prevChildren.length - 1
+          let newStartIdx = 0
+          let newEndIdx = nextChildren.length - 1
+          let oldStartVNode = prevChildren[oldStartIdx]
+          let oldEndVNode = prevChildren[oldEndIdx]
+          let newStartVNode = nextChildren[newStartIdx]
+          let newEndVNode = nextChildren[newEndIdx]
+          while (oldStartIdx <= oldEndIdx && newStartIdx <= newEndIdx) {
+            if (!oldStartVNode) {
+              oldStartVNode = prevChildren[++oldStartIdx]
+            } else if (!oldEndVNode) {
+              oldEndVNode = prevChildren[--oldEndIdx]
+            } else if (oldStartVNode.key === newStartVNode.key) {
+              patch(oldStartVNode, newStartVNode, container)
+              oldStartVNode = prevChildren[++oldStartIdx]
+              newStartVNode = nextChildren[++newStartIdx]
+            } else if (oldEndVNode.key === newEndVNode.key) {
+              patch(oldEndVNode, newEndVNode, container)
+              oldEndVNode = prevChildren[--oldEndIdx]
+              newEndVNode = nextChildren[--newEndIdx]
+            } else if (oldStartVNode.key === newEndVNode.key) {
+              patch(oldStartVNode, newEndVNode, container)
+              container.insertBefore(oldStartVNode.el, oldEndVNode.el.nextSibling)
+              oldStartVNode = prevChildren[++oldStartIdx]
+              newEndVNode = nextChildren[--newEndIdx]
+            } else if (oldEndVNode.key === newStartVNode.key) {
+              patch(oldEndVNode, newStartVNode, container)
+              container.insertBefore(oldEndVNode.el, oldStartVNode.el)
+              oldEndVNode = prevChildren[--oldEndIdx]
+              newStartVNode = nextChildren[++newStartIdx]
+            } else {
+              const idxInOld = prevChildren.findIndex(
+                node => node.key === newStartVNode.key
+              )
+              if (idxInOld >= 0) {
+                const vnodeToMove = prevChildren[idxInOld]
+                patch(vnodeToMove, newStartVNode, container)
+                container.insertBefore(vnodeToMove.el, oldStartVNode.el)
+                prevChildren[idxInOld] = undefined
+              }else{
+                // can not found , it should be one new node
+                mount(newStartVNode, container, false, oldStartVNode.el)
               }
             }
+          }
 
+          if (oldEndIdx < oldStartIdx) {
+            // forgot to handle delay node
+            for (let i = newStartIdx; i <= newEndIdx; i++) {
+              mount(nextChildren[i], container, false, oldStartVNode.el)
+            }
+          }else if (newEndIdx < newStartIdx) {
+            for (let i = oldStartIdx; i <= oldEndIdx; i++) {
+              container.removeChild(prevChildren[i].el)
+            }
           }
 
           break;
