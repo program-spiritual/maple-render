@@ -421,77 +421,23 @@ export function patchChildren(prevChildFlags: number, nextChildFlags: number, pr
           }
           break
         default:
-          // simple version
-          // for (const prevChild of prevChildren) {
-          //   container.removeChild(prevChild.el)
-          // }
-          // for (const nextChild of nextChildren) {
-          //   mount(nextChild, container)
-          // }
-          // patch
-          // for (let i = 0; i < prevChildren.lengh; i++) {
-          //   patch(prevChildren[i], nextChildren[i], container)
-          // }
-          // better patch
-          // const prevLen = prevChildren.length
-          // const nextLen = nextChildren.length
-          // const commonLength = prevLen > nextLen ? nextLen : prevLen
-          // for (let i = 0; i < commonLength; i++) {
-          //   patch(prevChildren[i], nextChildren[i], container)
-          // }
-          // if (prevLen > nextLen) {
-          //   // remove old node
-          //   for (let i = commonLength; i < prevLen; i++) {
-          //     container.removeChild(prevChildren[i].el)
-          //   }
-          // } else if (nextLen > prevLen) {
-          //   for (let i = commonLength; i < nextLen; i++) {
-          //     mount(nextChildren[i], container)
-          //   }
-          // }
-          //--------------------------------------------------
-          // description:2021/4/1 react version
-          //--------------------------------------------------
 
-
-          let lastIndex = 0
-          for (let i = 0; i < nextChildren.length; i++) {
-            const nextVNode = nextChildren[i]
-            let j = 0,find=false
-            for (j; j < prevChildren.length; j++) {
-              const prevVNode = prevChildren[j]
-              if (nextVNode.key === prevVNode.key) {
-                find=true
-                patch(prevVNode, nextVNode, container)
-                if (j < lastIndex) {
-                  // it need to move
-                  debugger
-                  const refNode = nextChildren[i - 1].el.nextSibling
-                  container.insertBefore(prevVNode.el, refNode)
-                  break
-                } else {
-                  // 更新 lastIndex
-                  lastIndex = j
-                }
-              }
+          const prevLen = prevChildren.length
+          const nextLen = nextChildren.length
+          const commonLength = prevLen > nextLen ? nextLen : prevLen
+          for (let i = 0; i < commonLength; i++) {
+            patch(prevChildren[i], nextChildren[i], container)
+          }
+          if (prevLen > nextLen) {
+            // remove old node
+            for (let i = commonLength; i < prevLen; i++) {
+              container.removeChild(prevChildren[i].el)
             }
-            if (!find) {
-              // mount new node
-              const refNode = i-1<0?prevChildren[0].el:nextChildren[i - 1].el.nextSibling
-              mount(nextVNode, container, false,refNode)
+          } else if (nextLen > prevLen) {
+            for (let i = commonLength; i < nextLen; i++) {
+              mount(nextChildren[i], container)
             }
           }
-
-          for (let i = 0; i < prevChildren.length; i++) {
-            const prevVNode = prevChildren[i]
-            const has = nextChildren.find(
-              nextVNode => nextVNode.key === prevVNode.key
-            )
-            if (!has) {
-              container.removeChild(prevVNode.el)
-            }
-          }
-
 
           break;
       }
